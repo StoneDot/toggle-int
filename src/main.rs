@@ -1,3 +1,5 @@
+#![feature(arbitrary_self_types)]
+
 use std::marker::PhantomPinned;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -9,12 +11,8 @@ struct SelfRef {
     _pin: PhantomPinned,
 }
 
-pub struct ToggleInt {
-    inner: Pin<Box<SelfRef>>,
-}
-
-impl ToggleInt {
-    fn new(ary: [i32; 2]) -> ToggleInt {
+impl SelfRef {
+    fn new(ary: [i32; 2]) -> Pin<Box<SelfRef>> {
         let data = SelfRef {
             ary,
             ptr: NonNull::dangling(),
@@ -26,35 +24,33 @@ impl ToggleInt {
         unsafe {
             boxed.as_mut().get_unchecked_mut().ptr = ptr;
         }
-        ToggleInt { inner: boxed }
+        boxed
     }
-    pub fn set(&mut self, value: i32) {
-        let target = &mut self.inner;
+    pub fn set_val(self: &mut Pin<Box<SelfRef>>, value: i32) {
         unsafe {
-            *target.as_mut().get_unchecked_mut().ptr.as_mut() = value;
+            *self.as_mut().get_unchecked_mut().ptr.as_mut() = value;
         }
     }
-    pub fn toggle(&mut self) {
-        let target = &mut self.inner;
+    pub fn toggle(self: &mut Pin<Box<SelfRef>>) {
         let ptr;
-        if NonNull::from(&target.ary[0]) == target.ptr {
-            ptr = NonNull::from(&target.ary[1]);
+        if NonNull::from(&self.ary[0]) == self.ptr {
+            ptr = NonNull::from(&self.ary[1]);
         } else {
-            ptr = NonNull::from(&target.ary[0]);
+            ptr = NonNull::from(&self.ary[0]);
         }
         unsafe {
-            target.as_mut().get_unchecked_mut().ptr = ptr;
+            self.as_mut().get_unchecked_mut().ptr = ptr;
         }
     }
     pub fn get(&self) -> i32 {
-        unsafe { *self.inner.ptr.as_ref() }
+        unsafe { *self.ptr.as_ref() }
     }
 }
 
 fn main() {
-    let mut data = ToggleInt::new([1, 2]);
+    let mut data = SelfRef::new([1, 2]);
     assert_eq!(1, data.get());
-    data.set(100);
+    data.set_val(100);
     assert_eq!(100, data.get());
     data.toggle();
     assert_eq!(2, data.get());
