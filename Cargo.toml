@@ -1,0 +1,7 @@
+[package]
+name = "toggle-int"
+version = "0.1.0"
+authors = ["Hiroaki Goto <goto.inct@gmail.com>"]
+edition = "2018"
+
+[dependencies]
